@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from app.auth.router import router as auth_router
 from app.auth.session import require_session
 from app.config import settings
+from app.curator.router import router as curator_router
 from app.db.database import init_db
 from app.playlists.router import router as playlists_router
 from app.playlists.spotify_client import get_current_user
@@ -43,6 +44,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(playlists_router)
 app.include_router(sorting_router)
+app.include_router(curator_router)
 
 
 @app.get("/health")

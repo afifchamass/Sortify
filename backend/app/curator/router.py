@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from .config import assert_read_only
@@ -6,8 +8,40 @@ from .service import run_liked_songs_audit
 router = APIRouter(prefix="/curator", tags=["library-curator"])
 
 
-def get_spotify_client():
-    raise HTTPException(status_code=501, detail="Spotify client dependency is not configured.")
+class SpotifySavedTracksClient:
+    def __init__(self, session: dict[str, Any]) -> None:
+        self._session = session
+
+    async def get_saved_tracks(self, limit: int, offset: int) -> dict[str, Any]:
+        import httpx
+        from app.playlists.spotify_client import _bearer, _ensure_fresh_token
+
+        self._session = await _ensure_fresh_token(self._session)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://api.spotify.com/v1/me/tracks",
+                headers=_bearer(self._session["access_token"]),
+                params={"limit": limit, "offset": offset},
+            )
+
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Spotify saved-track request failed ({response.status_code}).",
+            )
+
+        return response.json()
+
+
+async def get_spotify_client() -> SpotifySavedTracksClient:
+    assert_read_only()
+
+    from app.auth.session import require_session
+
+    raise HTTPException(
+        status_code=501,
+        detail="Session-backed Spotify dependency wiring is not yet enabled in this local patch. Next step: inject require_session through the route dependency graph.",
+    )
 
 
 @router.get("/audit-capabilities")
@@ -22,6 +56,8 @@ def audit_capabilities():
 
 
 @router.post("/audit/liked-songs")
-def audit_liked_songs(spotify_client=Depends(get_spotify_client)):
+async def audit_liked_songs(
+    spotify_client: SpotifySavedTracksClient = Depends(get_spotify_client),
+):
     assert_read_only()
     return run_liked_songs_audit(spotify_client)
