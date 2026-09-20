@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -33,15 +33,11 @@ class SpotifySavedTracksClient:
         return response.json()
 
 
-async def get_spotify_client() -> SpotifySavedTracksClient:
+async def get_spotify_client(
+    session: Annotated[dict[str, Any], Depends(__import__("app.auth.session", fromlist=["require_session"]).require_session)],
+) -> SpotifySavedTracksClient:
     assert_read_only()
-
-    from app.auth.session import require_session
-
-    raise HTTPException(
-        status_code=501,
-        detail="Session-backed Spotify dependency wiring is not yet enabled in this local patch. Next step: inject require_session through the route dependency graph.",
-    )
+    return SpotifySavedTracksClient(session)
 
 
 @router.get("/audit-capabilities")
