@@ -18,7 +18,7 @@ class CuratorRouterTests(unittest.TestCase):
 
     def test_audit_liked_songs_returns_audit(self):
         class FakeSpotifyClient:
-            def get_saved_tracks(self, limit, offset):
+            async def get_saved_tracks(self, limit, offset):
                 if offset > 0:
                     return {"total": 1, "items": []}
                 return {

@@ -1,5 +1,5 @@
-import time
-from typing import Callable, Dict, Iterable, List, Optional
+import asyncio
+from typing import Awaitable, Callable, Dict, List, Optional
 
 from .config import SETTINGS, assert_read_only
 from .models import SavedTrackInventoryRecord
@@ -29,10 +29,10 @@ def _to_record(item: Dict) -> Optional[SavedTrackInventoryRecord]:
     )
 
 
-def retrieve_all_saved_tracks(
-    fetch_page: Callable[[int, int], Dict],
+async def retrieve_all_saved_tracks(
+    fetch_page: Callable[[int, int], Awaitable[Dict]],
     checkpoint: Optional[Callable[[Dict], None]] = None,
-    sleep: Callable[[float], None] = time.sleep,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
 ) -> List[SavedTrackInventoryRecord]:
     """Read every saved track using offset pagination; this function never writes to Spotify."""
     assert_read_only()
@@ -45,12 +45,12 @@ def retrieve_all_saved_tracks(
         response = None
         for attempt in range(SETTINGS.max_retries):
             try:
-                response = fetch_page(SETTINGS.page_size, offset)
+                response = await fetch_page(SETTINGS.page_size, offset)
                 break
             except Exception:
                 if attempt == SETTINGS.max_retries - 1:
                     raise
-                sleep(min(2 ** attempt, 16))
+                await sleep(min(2 ** attempt, 16))
         if response is None:
             raise RuntimeError("Saved-track response was empty.")
 

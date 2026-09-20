@@ -10,14 +10,14 @@ from .saved_tracks import retrieve_all_saved_tracks
 from .spotify_adapter import SavedTracksSpotifyAdapter
 
 
-def run_liked_songs_audit(spotify_client: Any, output_directory: str = SETTINGS.export_directory) -> Dict:
+async def run_liked_songs_audit(spotify_client: Any, output_directory: str = SETTINGS.export_directory) -> Dict:
     """Create a local, read-only inventory export from Spotify Liked Songs."""
     assert_read_only()
     output = Path(output_directory)
     output.mkdir(parents=True, exist_ok=True)
     checkpoint_path = output / "liked_songs_checkpoint.json"
     adapter = SavedTracksSpotifyAdapter(spotify_client)
-    records = retrieve_all_saved_tracks(
+    records = await retrieve_all_saved_tracks(
         adapter.fetch_page,
         checkpoint=lambda payload: write_checkpoint(str(checkpoint_path), payload),
     )

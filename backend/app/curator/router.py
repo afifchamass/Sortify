@@ -56,4 +56,4 @@ async def audit_liked_songs(
     spotify_client: SpotifySavedTracksClient = Depends(get_spotify_client),
 ):
     assert_read_only()
-    return run_liked_songs_audit(spotify_client)
+    return await run_liked_songs_audit(spotify_client)

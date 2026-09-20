@@ -19,31 +19,50 @@ def item(track_id, uri=None):
     }
 
 
-class SavedTrackRetrievalTests(unittest.TestCase):
-    def test_retrieves_all_pages_and_reconciles(self):
+class SavedTrackRetrievalTests(unittest.IsolatedAsyncioTestCase):
+    async def test_retrieves_all_pages_and_reconciles(self):
         pages = {
             0: {"total": 3, "items": [item("1"), item("2")]},
             2: {"total": 3, "items": [item("3")]},
         }
         checkpoints = []
-        records = retrieve_all_saved_tracks(lambda limit, offset: pages[offset], checkpoints.append, sleep=lambda _: None)
+
+        async def fetch(limit, offset):
+            return pages[offset]
+
+        async def no_sleep(_):
+            return None
+
+        records = await retrieve_all_saved_tracks(fetch, checkpoints.append, sleep=no_sleep)
         self.assertEqual(3, len(records))
         self.assertEqual(3, checkpoints[-1]["retrieved_unique"])
 
-    def test_duplicate_uri_fails_reconciliation(self):
+    async def test_duplicate_uri_fails_reconciliation(self):
         pages = {
             0: {"total": 2, "items": [item("1"), item("2", "spotify:track:1")]},
         }
-        with self.assertRaises(RuntimeError):
-            retrieve_all_saved_tracks(lambda limit, offset: pages[offset], sleep=lambda _: None)
 
-    def test_retries_transient_error(self):
+        async def fetch(limit, offset):
+            return pages[offset]
+
+        async def no_sleep(_):
+            return None
+
+        with self.assertRaises(RuntimeError):
+            await retrieve_all_saved_tracks(fetch, sleep=no_sleep)
+
+    async def test_retries_transient_error(self):
         attempts = {"count": 0}
-        def fetch(limit, offset):
+
+        async def fetch(limit, offset):
             attempts["count"] += 1
             if attempts["count"] == 1:
                 raise ConnectionError("temporary")
             return {"total": 1, "items": [item("1")]}
-        records = retrieve_all_saved_tracks(fetch, sleep=lambda _: None)
+
+        async def no_sleep(_):
+            return None
+
+        records = await retrieve_all_saved_tracks(fetch, sleep=no_sleep)
         self.assertEqual(1, len(records))
         self.assertEqual(2, attempts["count"])

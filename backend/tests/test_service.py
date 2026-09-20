@@ -7,7 +7,7 @@ from app.curator.service import run_liked_songs_audit
 
 
 class FakeSpotifyClient:
-    def get_saved_tracks(self, limit, offset):
+    async def get_saved_tracks(self, limit, offset):
         if offset > 0:
             return {"total": 1, "items": []}
         return {
@@ -24,10 +24,10 @@ class FakeSpotifyClient:
         }
 
 
-class AuditServiceTests(unittest.TestCase):
-    def test_read_only_audit_exports_inventory_and_checkpoint(self):
+class AuditServiceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_read_only_audit_exports_inventory_and_checkpoint(self):
         with tempfile.TemporaryDirectory() as directory:
-            result = run_liked_songs_audit(FakeSpotifyClient(), directory)
+            result = await run_liked_songs_audit(FakeSpotifyClient(), directory)
             self.assertEqual("READ_ONLY", result["mode"])
             self.assertTrue(Path(result["inventory_csv"]).exists())
             self.assertTrue(Path(result["checkpoint"]).exists())

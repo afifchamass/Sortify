@@ -7,9 +7,9 @@ class SavedTracksSpotifyAdapter:
     def __init__(self, spotify_client: Any):
         self._spotify_client = spotify_client
 
-    def fetch_page(self, limit: int, offset: int) -> Dict:
+    async def fetch_page(self, limit: int, offset: int) -> Dict:
         if limit < 1 or limit > 50:
             raise ValueError("Spotify saved-track page size must be between 1 and 50.")
         if offset < 0:
             raise ValueError("Spotify saved-track offset cannot be negative.")
-        return self._spotify_client.get_saved_tracks(limit=limit, offset=offset)
+        return await self._spotify_client.get_saved_tracks(limit=limit, offset=offset)
